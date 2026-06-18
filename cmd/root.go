@@ -1,30 +1,28 @@
 /*
 Copyright © 2026 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
 	"os"
 
+	"github.com/Kschoffner13/GitSum/internal/version"
 	"github.com/spf13/cobra"
 )
 
-
-
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
-	Use:   "GitSum",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Use:   "gitsum",
+	Short: "AI-powered git history summarizer",
+	Long: `GitSum analyses your git commit history using AI and produces summaries
+tailored to different audiences — engineers, managers, clients, and changelogs.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+Examples:
+  gitsum generate                              # plain commit list
+  gitsum summary                               # full analysis, lead-engineer view
+  gitsum summary --audience client             # plain-language client update
+  gitsum summary --audience release-notes --since v1.2.0`,
+	Version: version.Version,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -37,15 +35,5 @@ func Execute() {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.GitSum.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
-
-

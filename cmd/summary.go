@@ -1,0 +1,137 @@
+package cmd
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/Kschoffner13/GitSum/internal/agents"
+	"github.com/Kschoffner13/GitSum/internal/git"
+	"github.com/spf13/cobra"
+)
+
+var (
+	summaryAudience string
+	summarySince    string
+	summaryLimit    int
+	summaryVerbose  bool
+)
+
+var summaryCmd = &cobra.Command{
+	Use:   "summary",
+	Short: "Generate an AI-powered multi-perspective summary of recent commits",
+	Long: `Runs a multi-agent analysis pipeline over your git history and produces
+a summary tailored to your chosen audience.
+
+Four specialist AI agents analyse the commits in parallel (technical, impact,
+risk, velocity) and a synthesizer agent combines their findings into a single,
+audience-appropriate output.
+
+Audiences:
+  lead-engineer   Technical detail + risk focus (default)
+  manager         Outcome + team health focus, no code specifics
+  client          Plain-language, benefit-framed update, zero jargon
+  release-notes   Structured markdown changelog (Added / Changed / Fixed …)
+
+Examples:
+  gitsum summary
+  gitsum summary --audience client
+  gitsum summary --audience manager --since v1.2.0
+  gitsum summary --audience release-notes --since HEAD~50
+  gitsum summary --limit 40 --verbose`,
+
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Validate --audience
+		audience := agents.Audience(summaryAudience)
+		validAudience := false
+		for _, a := range agents.ValidAudiences {
+			if a == audience {
+				validAudience = true
+				break
+			}
+		}
+		if !validAudience {
+			names := make([]string, len(agents.ValidAudiences))
+			for i, a := range agents.ValidAudiences {
+				names[i] = string(a)
+			}
+			return fmt.Errorf("unknown audience %q — valid options: %s", summaryAudience, strings.Join(names, ", "))
+		}
+
+		// Resolve API key
+		apiKey := os.Getenv("ANTHROPIC_API_KEY")
+		if apiKey == "" {
+			return fmt.Errorf("ANTHROPIC_API_KEY environment variable is not set")
+		}
+
+		// Parse commits
+		var (
+			gitCommits []git.Commit
+			err        error
+		)
+		if summarySince != "" {
+			gitCommits, err = git.ParseSince(".", summarySince)
+		} else {
+			gitCommits, err = git.Parse(".", summaryLimit)
+		}
+		if err != nil {
+			return fmt.Errorf("reading git history: %w", err)
+		}
+		if len(gitCommits) == 0 {
+			return fmt.Errorf("no commits found (since: %q, limit: %d)", summarySince, summaryLimit)
+		}
+
+		fmt.Fprintf(cmd.ErrOrStderr(), "Analysing %d commits for audience: %s\n\n", len(gitCommits), audience)
+
+		// Convert to agents.Commit
+		commits := agents.CommitsFromGit(gitCommits)
+
+		// Run the pipeline
+		result, err := agents.Run(
+			context.Background(),
+			commits,
+			agents.PipelineOptions{
+				APIKey:   apiKey,
+				Audience: audience,
+				Verbose:  summaryVerbose,
+			},
+			func(msg string) {
+				// Progress goes to stderr so stdout stays clean for piping / redirection
+				fmt.Fprintln(cmd.ErrOrStderr(), msg)
+			},
+		)
+		if err != nil {
+			return err
+		}
+
+		// --verbose: print raw analyst reports before the final summary
+		if summaryVerbose && len(result.Reports) > 0 {
+			fmt.Fprintln(cmd.OutOrStdout(), "=== ANALYST REPORTS ===\n")
+			for _, r := range result.Reports {
+				if r.Err != nil {
+					fmt.Fprintf(cmd.OutOrStdout(), "--- %s [FAILED: %s] ---\n\n", r.Role, r.Err)
+				} else {
+					fmt.Fprintf(cmd.OutOrStdout(), "--- %s ---\n%s\n\n", r.Role, r.Findings)
+				}
+			}
+			fmt.Fprintln(cmd.OutOrStdout(), "=== FINAL SUMMARY ===\n")
+		}
+
+		fmt.Fprintln(cmd.OutOrStdout(), result.Summary)
+		return nil
+	},
+}
+
+func init() {
+	summaryCmd.Flags().StringVarP(&summaryAudience, "audience", "a", "lead-engineer",
+		"Target audience: lead-engineer, manager, client, release-notes")
+	summaryCmd.Flags().StringVar(&summarySince, "since", "",
+		"Limit to commits after this ref/tag/date (e.g. v1.2.0, HEAD~20). Overrides --limit.")
+	summaryCmd.Flags().IntVarP(&summaryLimit, "limit", "n", 20,
+		"Maximum number of recent commits to analyse (ignored when --since is set)")
+	summaryCmd.Flags().BoolVarP(&summaryVerbose, "verbose", "v", false,
+		"Print raw analyst reports before the final summary")
+
+	rootCmd.AddCommand(summaryCmd)
+}
