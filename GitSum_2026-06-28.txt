@@ -1,0 +1,25 @@
+GitSum Summary — GitSum
+Generated: 2026-06-28 12:05:10
+
+Parameters:
+  audience: client
+  since: 
+  days: 0
+  limit: 20
+  verbose: false
+
+We're excited to share the latest progress on **gitsum**, a new tool that reads your code repository's history and uses AI to produce clear, meaningful summaries of what has changed over time. Here's what's been built and delivered so far:
+
+**What's new:**
+
+- **AI-powered commit summaries.** You can now point gitsum at any repository and receive an intelligently written summary of its change history — no manual review required.
+
+- **Richer, more contextual analysis.** Rather than a simple one-pass scan, gitsum uses a two-stage AI process: one layer analyses the raw changes in detail, and a second layer weaves those findings into a coherent, readable narrative.
+
+- **Easy API key setup.** We fixed the friction of having to manually configure your AI credentials every time. You can now run a single setup command (`gitsum config set-key`) to save your key once, and gitsum will remember it automatically on every future use — no repeated configuration needed.
+
+- **Works on all major platforms.** Your saved settings are stored in the standard, secure location for your operating system, whether you're on Windows, macOS, or Linux.
+
+- **Version tracking.** gitsum now reports its own version, making it straightforward to confirm which release you're running.
+
+We'll continue refining the tool and will share further updates as new capabilities are added. Please don't hesitate to reach out with any questions or feedback.

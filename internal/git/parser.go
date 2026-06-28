@@ -26,6 +26,12 @@ func Parse(repoPath string, limit int) ([]Commit, error) {
 	return runGitLog(repoPath, args)
 }
 
+// ParseDays returns all commits authored within the last n days.
+func ParseDays(repoPath string, days int) ([]Commit, error) {
+	args := []string{"-C", repoPath, "log", fmt.Sprintf("--since=%d days ago", days), "--pretty=format:%H|%an|%ai|%s"}
+	return runGitLog(repoPath, args)
+}
+
 // ParseSince returns all commits reachable from HEAD but not from the given
 // ref (a branch name, tag, or date string accepted by git-log --after).
 //

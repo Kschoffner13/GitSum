@@ -61,6 +61,9 @@ gitsum summary --audience release-notes
 gitsum summary --audience release-notes --since v1.2.0
 gitsum summary --audience manager --since HEAD~50
 
+# Limit to commits from the last N days
+gitsum summary --days 7
+
 # Increase the commit window (default 20)
 gitsum summary --limit 50
 

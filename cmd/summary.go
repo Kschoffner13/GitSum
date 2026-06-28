@@ -8,12 +8,14 @@ import (
 
 	"github.com/Kschoffner13/GitSum/internal/agents"
 	"github.com/Kschoffner13/GitSum/internal/git"
+	"github.com/Kschoffner13/GitSum/internal/output"
 	"github.com/spf13/cobra"
 )
 
 var (
 	summaryAudience string
 	summarySince    string
+	summaryDays     int
 	summaryLimit    int
 	summaryVerbose  bool
 )
@@ -39,6 +41,7 @@ Examples:
   gitsum summary --audience client
   gitsum summary --audience manager --since v1.2.0
   gitsum summary --audience release-notes --since HEAD~50
+  gitsum summary --days 7
   gitsum summary --limit 40 --verbose`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -70,16 +73,19 @@ Examples:
 			gitCommits []git.Commit
 			err        error
 		)
-		if summarySince != "" {
+		switch {
+		case summarySince != "":
 			gitCommits, err = git.ParseSince(".", summarySince)
-		} else {
+		case summaryDays > 0:
+			gitCommits, err = git.ParseDays(".", summaryDays)
+		default:
 			gitCommits, err = git.Parse(".", summaryLimit)
 		}
 		if err != nil {
 			return fmt.Errorf("reading git history: %w", err)
 		}
 		if len(gitCommits) == 0 {
-			return fmt.Errorf("no commits found (since: %q, limit: %d)", summarySince, summaryLimit)
+			return fmt.Errorf("no commits found (since: %q, days: %d, limit: %d)", summarySince, summaryDays, summaryLimit)
 		}
 
 		fmt.Fprintf(cmd.ErrOrStderr(), "Analysing %d commits for audience: %s\n\n", len(gitCommits), audience)
@@ -119,6 +125,21 @@ Examples:
 		}
 
 		fmt.Fprintln(cmd.OutOrStdout(), result.Summary)
+
+		params := []output.Param{
+			{Name: "audience", Value: string(audience)},
+			{Name: "since", Value: summarySince},
+			{Name: "days", Value: fmt.Sprintf("%d", summaryDays)},
+			{Name: "limit", Value: fmt.Sprintf("%d", summaryLimit)},
+			{Name: "verbose", Value: fmt.Sprintf("%v", summaryVerbose)},
+		}
+
+		path, err := output.WriteSummaryFile(".", params, result.Summary)
+		if err != nil {
+			return fmt.Errorf("writing summary file: %w", err)
+		}
+		fmt.Fprintf(cmd.ErrOrStderr(), "\nSummary written to %s\n", path)
+
 		return nil
 	},
 }
@@ -127,9 +148,11 @@ func init() {
 	summaryCmd.Flags().StringVarP(&summaryAudience, "audience", "a", "lead-engineer",
 		"Target audience: lead-engineer, manager, client, release-notes")
 	summaryCmd.Flags().StringVar(&summarySince, "since", "",
-		"Limit to commits after this ref/tag/date (e.g. v1.2.0, HEAD~20). Overrides --limit.")
+		"Limit to commits after this ref/tag/date (e.g. v1.2.0, HEAD~20). Overrides --days and --limit.")
+	summaryCmd.Flags().IntVarP(&summaryDays, "days", "d", 0,
+		"Limit to commits from the last N days. Overrides --limit; ignored when --since is set.")
 	summaryCmd.Flags().IntVarP(&summaryLimit, "limit", "n", 20,
-		"Maximum number of recent commits to analyse (ignored when --since is set)")
+		"Maximum number of recent commits to analyse (ignored when --since or --days is set)")
 	summaryCmd.Flags().BoolVarP(&summaryVerbose, "verbose", "v", false,
 		"Print raw analyst reports before the final summary")
 

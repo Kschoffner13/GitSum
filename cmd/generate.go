@@ -10,12 +10,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var generateDays int
+
 var generateCmd = &cobra.Command{
 	Use:   "generate",
 	Short: "Generate a summary of the git repository",
 	Long:  `Generate a summary of the git repository, including recent commit history.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		commits, err := git.Parse(".", 20)
+		var (
+			commits []git.Commit
+			err     error
+		)
+		if generateDays > 0 {
+			commits, err = git.ParseDays(".", generateDays)
+		} else {
+			commits, err = git.Parse(".", 20)
+		}
 		if err != nil {
 			return fmt.Errorf("parsing repo: %w", err)
 		}
@@ -30,5 +40,8 @@ var generateCmd = &cobra.Command{
 }
 
 func init() {
+	generateCmd.Flags().IntVarP(&generateDays, "days", "d", 0,
+		"Limit to commits from the last N days (overrides the default last-20 window)")
+
 	rootCmd.AddCommand(generateCmd)
 }
