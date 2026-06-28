@@ -6,6 +6,7 @@ package cmd
 import (
 	"os"
 
+	"github.com/Kschoffner13/GitSum/internal/config"
 	"github.com/Kschoffner13/GitSum/internal/version"
 	"github.com/spf13/cobra"
 )
@@ -23,6 +24,9 @@ Examples:
   gitsum summary --audience client             # plain-language client update
   gitsum summary --audience release-notes --since v1.2.0`,
 	Version: version.Version,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		return config.Load()
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

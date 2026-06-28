@@ -17,7 +17,18 @@ cd GitSum
 go build -o gitsum .
 ```
 
-Set your Anthropic API key:
+Set your Anthropic API key (get one at [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys)).
+
+Either store it once via gitsum itself — saved to a user-level config file (e.g. `%AppData%\gitsum\.env` on Windows), so it works from any directory and any shell session:
+
+```bash
+gitsum config set-key sk-ant-...
+
+# Or omit the argument to be prompted instead, so the key never touches your shell history:
+gitsum config set-key
+```
+
+…or export it manually for the current session (this takes precedence over the stored value):
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
@@ -104,7 +115,8 @@ gitsum summary --audience release-notes --since v1.2.0 > CHANGELOG.md
 │   ├── root.go        # Root Cobra command
 │   ├── gitsum.go      # version subcommand
 │   ├── generate.go    # generate subcommand (plain commit list)
-│   └── summary.go     # summary subcommand (AI pipeline)
+│   ├── summary.go     # summary subcommand (AI pipeline)
+│   └── config.go      # config subcommand (set-key)
 └── internal/
     ├── agents/
     │   ├── types.go        # Shared types: Commit, Audience, AnalystReport, SummaryResult
@@ -113,6 +125,8 @@ gitsum summary --audience release-notes --since v1.2.0 > CHANGELOG.md
     │   └── pipeline.go     # Orchestrator: Run(), CommitsFromGit()
     ├── ai/
     │   └── summarize.go    # Legacy plain-text summarizer (used by generate)
+    ├── config/
+    │   └── config.go       # User-level API key storage (~/.config/gitsum or %AppData%\gitsum)
     ├── git/
     │   └── parser.go       # git log parsing → []git.Commit
     ├── output/
