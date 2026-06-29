@@ -32,17 +32,36 @@ func RepoName(repoPath string) (string, error) {
 	return filepath.Base(abs), nil
 }
 
+// resolvePath determines the final file path to write a summary report to:
+//   - outPath == ""                     → defaultName in the current directory.
+//   - outPath is an existing directory  → defaultName inside it.
+//   - anything else                     → outPath itself, overwriting any
+//     existing file there.
+func resolvePath(defaultName, outPath string) string {
+	if outPath == "" {
+		return defaultName
+	}
+	if info, err := os.Stat(outPath); err == nil && info.IsDir() {
+		return filepath.Join(outPath, defaultName)
+	}
+	return outPath
+}
+
 // WriteSummaryFile writes a summary report — including the parameters used
-// to generate it — to a text file named after the repo and the current
-// date (e.g. "GitSum_2026-06-28.txt") in the current directory, and returns
-// the path written to.
-func WriteSummaryFile(repoPath string, params []Param, summary string) (string, error) {
+// to generate it — to a text file, and returns the path written to.
+//
+// outPath controls the destination: a blank string writes
+// "<repo>_<date>.txt" (e.g. "GitSum_2026-06-28.txt") to the current
+// directory; an existing directory gets that same default filename written
+// inside it; any other path is used as-is, overwriting an existing file.
+func WriteSummaryFile(repoPath, outPath string, params []Param, summary string) (string, error) {
 	name, err := RepoName(repoPath)
 	if err != nil {
 		return "", err
 	}
 
-	filename := fmt.Sprintf("%s_%s.txt", name, time.Now().Format("2006-01-02"))
+	defaultName := fmt.Sprintf("%s_%s.txt", name, time.Now().Format("2006-01-02"))
+	path := resolvePath(defaultName, outPath)
 
 	var b strings.Builder
 	fmt.Fprintf(&b, "GitSum Summary — %s\n", name)
@@ -54,9 +73,9 @@ func WriteSummaryFile(repoPath string, params []Param, summary string) (string, 
 	fmt.Fprintln(&b)
 	fmt.Fprintln(&b, summary)
 
-	if err := os.WriteFile(filename, []byte(b.String()), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(b.String()), 0644); err != nil {
 		return "", fmt.Errorf("writing summary file: %w", err)
 	}
 
-	return filename, nil
+	return path, nil
 }

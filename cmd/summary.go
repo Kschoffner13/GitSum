@@ -18,6 +18,7 @@ var (
 	summaryDays     int
 	summaryLimit    int
 	summaryVerbose  bool
+	summaryOut      string
 )
 
 var summaryCmd = &cobra.Command{
@@ -42,7 +43,9 @@ Examples:
   gitsum summary --audience manager --since v1.2.0
   gitsum summary --audience release-notes --since HEAD~50
   gitsum summary --days 7
-  gitsum summary --limit 40 --verbose`,
+  gitsum summary --limit 40 --verbose
+  gitsum summary --out report.txt
+  gitsum summary --out ./reports/`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Validate --audience
@@ -134,7 +137,7 @@ Examples:
 			{Name: "verbose", Value: fmt.Sprintf("%v", summaryVerbose)},
 		}
 
-		path, err := output.WriteSummaryFile(".", params, result.Summary)
+		path, err := output.WriteSummaryFile(".", summaryOut, params, result.Summary)
 		if err != nil {
 			return fmt.Errorf("writing summary file: %w", err)
 		}
@@ -155,6 +158,8 @@ func init() {
 		"Maximum number of recent commits to analyse (ignored when --since or --days is set)")
 	summaryCmd.Flags().BoolVarP(&summaryVerbose, "verbose", "v", false,
 		"Print raw analyst reports before the final summary")
+	summaryCmd.Flags().StringVarP(&summaryOut, "out", "o", "",
+		"Write the report to this file (overwritten if it exists) or, if a directory, into it as <repo>_<date>.txt")
 
 	rootCmd.AddCommand(summaryCmd)
 }

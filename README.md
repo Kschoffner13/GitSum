@@ -46,7 +46,7 @@ gitsum generate
 
 ### `gitsum summary`
 
-Runs the full multi-agent pipeline and produces an audience-appropriate summary.
+Runs the full multi-agent pipeline and produces an audience-appropriate summary. The result is printed to stdout **and** saved to a text report file — by default `<repo>_<date>.txt` (e.g. `GitSum_2026-06-28.txt`) in the current directory, containing the summary plus the parameters used to generate it.
 
 ```bash
 # Default: lead-engineer audience, last 20 commits
@@ -69,6 +69,10 @@ gitsum summary --limit 50
 
 # Print raw analyst reports before the final summary
 gitsum summary --verbose
+
+# Control where the report file is written
+gitsum summary --out report.txt    # writes/overwrites this exact file
+gitsum summary --out ./reports/    # existing directory → writes <repo>_<date>.txt inside it
 ```
 
 #### Audiences
